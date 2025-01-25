@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controllers/object_detection_controller.dart';
@@ -12,98 +11,99 @@ class CameraDetectionScreen extends StatefulWidget {
 
 class _CameraDetectionScreenState extends State<CameraDetectionScreen> {
   final ObjectDetectionController controller =
-      Get.put(ObjectDetectionController());
+  Get.put(ObjectDetectionController());
 
   @override
   void initState() {
-// TODO: implement initState
     super.initState();
     controller.initializeCamera();
     controller.initializeImageLabeler();
     controller.initializeObjectDetector();
-SystemChrome.setPreferredOrientations([
-  DeviceOrientation.portraitUp,
-  // DeviceOrientation.portraitDown,
-]);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
   }
 
   @override
   void dispose() {
-// TODO: implement dispose
-    super.dispose();
     controller.cameraController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Text(
-        "Selected Object: ${controller.selectedObject}",
-        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
-      )),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Obx(() {
-              if (!controller.cameraController.value.isInitialized) {
-                return const Center(child: CircularProgressIndicator());
-              }
+        title: Obx(() {
+          return Text(
+            "Selected Object: ${controller.selectedObject}",
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+          );
+        }),
+      ),
+      body: Stack(
+        children: [
+          // Camera Preview with Bounding Boxes
+          Obx(() {
+            if (!controller.cameraController.value.isInitialized) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              return Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+            return Stack(
+              children: [
+                // Camera preview
+                CameraPreview(controller.cameraController),
+                // Bounding boxes
+                CustomPaint(
+                  painter: BoundingBoxPainter(
+                    controller.boundingBoxes.value,
+                    controller.labels.value,
+                    controller.labelPositions.value,
+                  ),
                 ),
-                child: Stack(
-                  children: [
-                    CameraPreview(controller.cameraController),
-                    CustomPaint(
-                      painter: BoundingBoxPainter(
-                          controller.boundingBoxes.value,
-                          controller.labels.value,
-                          controller.labelPositions.value),
-                    ),
-                  ],
+              ],
+            );
+          }),
+
+          // Information Section
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.8),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
                 ),
-              );
-            }),
-            Container(
+              ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Obx(() => Text(
-                    "Detected object: ${controller.labels}",
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black),
+                    "Detected object: ${controller.labels.join(', ')}",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
                   )),
-                  SizedBox(
-                    height: 15,
-                  ),
+                  const SizedBox(height: 10),
                   Obx(() => Text(
-                    "Confidence: ${controller.objectConfidences} ",
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black),
+                    "Confidence: ${controller.objectConfidences}",
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
                   )),
-                  SizedBox(
-                    height: 15,
-                  ),
-                  Obx(() => Text(
-                    "${controller.objectConfidences}",
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black),
-                  ))
                 ],
               ),
-            )
-
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -124,10 +124,10 @@ class BoundingBoxPainter extends CustomPainter {
       ..strokeWidth = 2.0;
 
     final labelPaint = Paint()
-      ..color = Colors.white
+      ..color = Colors.black.withOpacity(0.7)
       ..style = PaintingStyle.fill;
 
-    final textStyle = TextStyle(color: Colors.black, fontSize: 16);
+    final textStyle = TextStyle(color: Colors.white, fontSize: 12);
 
     for (int i = 0; i < boundingBoxes.length; i++) {
       final box = boundingBoxes[i];
@@ -136,11 +136,13 @@ class BoundingBoxPainter extends CustomPainter {
 
       canvas.drawRect(box, paint);
 
+      // Draw label background
       canvas.drawRect(
-        Rect.fromLTWH(labelPosition.dx, labelPosition.dy, 100, 30),
+        Rect.fromLTWH(labelPosition.dx, labelPosition.dy, 100, 20),
         labelPaint,
       );
 
+      // Draw label text
       final textSpan = TextSpan(text: label, style: textStyle);
       final textPainter = TextPainter(
         text: textSpan,
@@ -148,7 +150,7 @@ class BoundingBoxPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      textPainter.paint(canvas, labelPosition);
+      textPainter.paint(canvas, Offset(labelPosition.dx + 5, labelPosition.dy + 2));
     }
   }
 

@@ -31,13 +31,13 @@ class ObjectDetectionController extends GetxController {
   RxList<CapturedImage> capturedImages = <CapturedImage>[].obs;
 
   final objectsIcons = [
-    Icons.laptop,
+    Icons.visibility,
     Icons.shield_moon_outlined,
-    Icons.mouse,
+    Icons.phone_android,
     Icons.eco_outlined,
   ];
 
-  final objects = ['Glasses', 'Helmet', 'Mobile phone', 'Flower'];
+  final objects = ['Glasses', 'Shoe', 'Mobile phone', 'Flower'];
 
   @override
   void onInit() {
@@ -100,7 +100,7 @@ class ObjectDetectionController extends GetxController {
       Uint8List yChannel = image.planes[0].bytes;
       double avgBrightness = yChannel.reduce((a, b) => a + b) / yChannel.length;
 
-      if (avgBrightness < 50) {
+      if (avgBrightness < 10) {
         if (!isLowLight.value) {
           isLowLight.value = true;
           Fluttertoast.showToast(
@@ -141,9 +141,17 @@ class ObjectDetectionController extends GetxController {
           clearFrameMessage.value = 'Keep object in camera frame: ${label.label}';
         }
 
-        if (label.label == selectedObject.value && label.confidence > 0.8) {
+        if (label.label == selectedObject.value && label.confidence > 0.7) {
           await captureImage();
           break;
+        }
+        else{
+          // Fluttertoast.showToast(
+          //   msg: "Please put the object in the Camera frame",
+          //   toastLength: Toast.LENGTH_SHORT,
+          //   gravity: ToastGravity.SNACKBAR,
+          // );
+
         }
       }
 
@@ -174,7 +182,7 @@ class ObjectDetectionController extends GetxController {
       );
       capturedImages.add(capturedImage);
       imageCaptured.value = true;
-      Get.to(() => ResultScreen(imagePath: imageFile.path, metadata: metadata));
+      Get.off(() => ResultScreen(imagePath: imageFile.path, metadata: metadata));
     } catch (e) {
       print('Error capturing image: $e');
     }
